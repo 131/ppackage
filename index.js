@@ -14,11 +14,11 @@ const Dockerfile = require('./lib/dockerfile');
 
 class ddocker {
 
-  async version(version = false) {
+  async version(version = false, notag = false) {
 
     let dirty = await wait(spawn('git', ["diff", "--quiet"])).catch(err => true);
-    if(dirty)
-      return "Working directory not clean, aborting";
+    if(dirty && !notag)
+      throw "Working directory not clean, aborting";
 
     let target_version = version || args.args.shift();
 
@@ -38,8 +38,10 @@ class ddocker {
 
 
     await passthru('git', ['add', 'Dockerfile']);
-    await passthru('git', ['commit', '-m', `v${target_version}`, 'Dockerfile']);
-    await passthru('git', ['tag', `v${target_version}`]);
+    if(!notag) {
+      await passthru('git', ['commit', '-m', `v${target_version}`, 'Dockerfile']);
+      await passthru('git', ['tag', `v${target_version}`]);
+    }
     return target_version;
   }
 
