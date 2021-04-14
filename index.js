@@ -14,13 +14,16 @@ const Dockerfile = require('./lib/dockerfile');
 
 class ddocker {
 
-  async version(version = false, notag = false) {
+  async version(version = false, notag = false, nonpm = false) {
+    let target_version = version || args.args.shift();
+
+    if(!nonpm && fs.existsSync('package.json') && process.env['npm_lifecycle_event'] != "version")
+      throw `Please change version using \`npm version ${target_version}\``;
 
     let dirty = await wait(spawn('git', ["diff", "--quiet"])).catch(err => true);
     if(dirty && !notag)
       throw "Working directory not clean, aborting";
 
-    let target_version = version || args.args.shift();
 
     const LABEL_VERSION = "org.opencontainers.image.version";
     let body = this._read();
