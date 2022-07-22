@@ -1,10 +1,10 @@
 {
-  "name": "ddocker",
+  "name": "ppackage",
   "version": "1.0.3",
   "description": "",
   "main": "index.js",
   "bin": {
-    "ddocker": "./bin/ddocker"
+    "ppackage": "./bin/ppackage"
   },
   "dependencies": {
     "mout": "^1.0.0",
