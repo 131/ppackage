@@ -78,6 +78,8 @@ class ppackage {
       files.push('package.json');
     }
 
+    await passthru('git', ['add',  ...files]);
+
     if(!notag) {
       await passthru('git', ['commit', '-m', `v${target_version}`, ...files]);
       await passthru('git', ['tag', `v${target_version}`]);
