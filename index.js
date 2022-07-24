@@ -47,7 +47,7 @@ class ppackage {
     if(modes.docker.enabled) {
       let body = fs.readFileSync('Dockerfile', 'utf8');
       modes.docker.meta = Dockerfile.parse(body);
-      current_version = modes.docker.meta[DOCKER_LABEL_VERSION];
+      current_version = modes.docker.meta.labels[DOCKER_LABEL_VERSION];
     }
 
     if(!current_version)
