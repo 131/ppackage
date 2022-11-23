@@ -27,8 +27,7 @@ class ppackage {
 
     let target_version = version || args.args.shift();
 
-    let dirty = await wait(spawn('git', ["diff", "--quiet"])).catch(err => true);
-
+    let dirty = await wait(spawn('git', ["diff-index", "--quiet", "HEAD"])).catch(err => true);
     if(dirty && !notag)
       throw "Working directory not clean, aborting";
 
@@ -59,6 +58,14 @@ class ppackage {
     if(!target_version)
       throw `Invalid semver range`;
 
+    if(modes.npm.enabled) {
+      let version_hook = modes.npm.meta?.scripts?.version;
+      if(version_hook) {
+        console.log("Running version hook", version_hook);
+        await passthru(version_hook, {shell : true, env : {npm_package_version : target_version}});
+      }
+    }
+
     let files = [];
     if(modes.docker.enabled) {
       modes.docker.meta.setLabel(DOCKER_LABEL_VERSION, target_version);
@@ -81,7 +88,7 @@ class ppackage {
     await passthru('git', ['add',  ...files]);
 
     if(!notag) {
-      await passthru('git', ['commit', '-m', `v${target_version}`, ...files]);
+      await passthru('git', ['commit', '-m', `v${target_version}`]); //, ...files
       await passthru('git', ['tag', `v${target_version}`]);
     }
 
