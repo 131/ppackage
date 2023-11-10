@@ -59,7 +59,7 @@ class ppackage {
       throw `Invalid semver range`;
 
     if(modes.npm.enabled && !process.env['npm_package_version']) {
-      let version_hook = modes.npm.meta.scripts.version;
+      let version_hook = modes.npm.meta.scripts && modes.npm.meta.scripts.version;
       if(version_hook) {
         console.log("Running version hook", version_hook);
         await passthru(version_hook, {shell : true, env : {npm_package_version : target_version}});
