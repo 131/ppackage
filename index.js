@@ -2,7 +2,6 @@
 
 const fs   = require('fs');
 const semver   = require('semver');
-const path = require('path');
 const {spawn} = require('child_process');
 
 const args = require('nyks/process/parseArgs')();
@@ -10,6 +9,14 @@ const passthru = require('nyks/child_process/passthru');
 const wait = require('nyks/child_process/wait');
 
 const Dockerfile = require('./lib/dockerfile');
+const {Parser, Composer} = require('yaml');
+
+
+const laxParser = function(body) {
+  const tokens = new Parser().parse(body);
+  const docs = new Composer({merge : true, uniqueKeys : false}).compose(tokens);
+  return docs.next().value;
+};
 
 
 class ppackage {
@@ -17,37 +24,86 @@ class ppackage {
   async version(version = false, notag = false) {
     let current_version;
 
-    let modes = {
-      composer  : { enabled : fs.existsSync('composer.json') },
-      docker    : { enabled : fs.existsSync('Dockerfile') },
-      npm       : { enabled : fs.existsSync('package.json') },
-    };
 
     const DOCKER_LABEL_VERSION = "org.opencontainers.image.version";
+    const GITLAB_PATH_VERSION  = ".version";
+
+    let modes = {
+      gitlab    : {
+        file    : '.gitlab-ci.yml',
+        analyze : function() {
+          const body = fs.readFileSync(this.file, 'utf-8');
+          this.meta = laxParser(body);
+          current_version = this.meta.get(GITLAB_PATH_VERSION);
+        },
+        commit : function({target_version, files}) {
+          let opts = {lineWidth : 0};
+          this.meta.set(GITLAB_PATH_VERSION, target_version);
+          fs.writeFileSync(this.file, this.meta.toString(opts));
+          files.push(this.file);
+        }
+
+      },
+      composer  : {
+        file : 'composer.json',
+        analyze : function() {
+          const body = fs.readFileSync(this.file, 'utf-8');
+          this.meta = JSON.parse(body);
+          current_version = this.meta.version;
+        },
+        commit : function({target_version, files}) {
+          this.meta.version =  target_version;
+          fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2));
+          files.push(this.file);
+        }
+      },
+      docker    : {
+        file : 'Dockerfile',
+        analyze : function () {
+          const body = fs.readFileSync(this.file, 'utf-8');
+          this.meta = Dockerfile.parse(body);
+          current_version = this.meta.labels[DOCKER_LABEL_VERSION];
+        },
+        commit : function(target_version) {
+          modes.docker.meta.setLabel(DOCKER_LABEL_VERSION, target_version);
+          fs.writeFileSync(this.file, this.meta.toString());
+          files.push(this.file);
+        }
+      },
+
+      npm       : {
+        file : 'package.json',
+        analyze : function () {
+          const body = fs.readFileSync(this.file, 'utf-8');
+          this.meta = JSON.parse(body);
+          current_version = this.meta.version;
+        },
+        commit : function({target_version, files}) {
+          this.meta.version =  target_version;
+          fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2));
+          files.push(this.file);
+        }
+
+      }
+    };
+
+    // prepare modes
+    for(let [mode_n, mode] of Object.entries(modes)) {
+      if(!fs.existsSync(mode.file)) {
+        delete modes[mode_n];
+        continue;
+      }
+      mode.analyze.call(mode);
+    }
+
+
 
     let target_version = version || args.args.shift();
 
-    let dirty = await wait(spawn('git', ["diff-index", "--quiet", "HEAD"])).catch(err => true);
+    let dirty = await wait(spawn('git', ["diff-index", "--quiet", "HEAD"])).catch(() => true);
     if(dirty && !notag)
       throw "Working directory not clean, aborting";
 
-    if(modes.composer.enabled) {
-      let body = fs.readFileSync('composer.json', 'utf-8');
-      modes.composer.meta = JSON.parse(body);
-      current_version = modes.composer.meta.version;
-    }
-
-    if(modes.npm.enabled) {
-      let body = fs.readFileSync('package.json', 'utf-8');
-      modes.npm.meta = JSON.parse(body);
-      current_version = modes.npm.meta.version;
-    }
-
-    if(modes.docker.enabled) {
-      let body = fs.readFileSync('Dockerfile', 'utf8');
-      modes.docker.meta = Dockerfile.parse(body);
-      current_version = modes.docker.meta.labels[DOCKER_LABEL_VERSION];
-    }
 
     if(!current_version)
       current_version =  "0.0.0";
@@ -58,7 +114,7 @@ class ppackage {
     if(!target_version)
       throw `Invalid semver range`;
 
-    if(modes.npm.enabled && !process.env['npm_package_version']) {
+    if(modes.npm && !process.env['npm_package_version']) {
       let version_hook = modes.npm.meta.scripts && modes.npm.meta.scripts.version;
       if(version_hook) {
         console.log("Running version hook", version_hook);
@@ -66,24 +122,10 @@ class ppackage {
       }
     }
 
+
     let files = [];
-    if(modes.docker.enabled) {
-      modes.docker.meta.setLabel(DOCKER_LABEL_VERSION, target_version);
-      fs.writeFileSync('Dockerfile', modes.docker.meta.toString());
-      files.push('Dockerfile');
-    }
-
-    if(modes.composer.enabled) {
-      modes.composer.meta.version =  target_version;
-      fs.writeFileSync('composer.json', JSON.stringify(modes.composer.meta, null, 2));
-      files.push('composer.json');
-    }
-
-    if(modes.npm.enabled) {
-      modes.npm.meta.version =  target_version;
-      fs.writeFileSync('package.json', JSON.stringify(modes.npm.meta, null, 2));
-      files.push('package.json');
-    }
+    for(let [, mode] of Object.entries(modes))
+      mode.commit.call(mode, {target_version, files});
 
     await passthru('git', ['add',  ...files]);
 
