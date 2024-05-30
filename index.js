@@ -64,8 +64,8 @@ class ppackage {
           this.meta = Dockerfile.parse(body);
           current_version = this.meta.labels[DOCKER_LABEL_VERSION];
         },
-        commit : function(target_version) {
-          modes.docker.meta.setLabel(DOCKER_LABEL_VERSION, target_version);
+        commit : function({target_version, files}) {
+          this.meta.setLabel(DOCKER_LABEL_VERSION, target_version);
           fs.writeFileSync(this.file, this.meta.toString());
           files.push(this.file);
         }
