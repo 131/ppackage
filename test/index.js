@@ -7,11 +7,14 @@ describe("static test suite", function() {
 
   it("should check git_to_https", function() {
 
-    let git_url  = "git@git.ivsdev.net:domyks/libraries/ddev.git";
-    let http_url = "https://git.ivsdev.net/domyks/libraries/ddev.git";
+    let urls = {
+      "git@git.ivsdev.net:domyks/libraries/ddev.git"      : "https://git.ivsdev.net/domyks/libraries/ddev.git",
+      "https://git.ivsdev.net/domyks/libraries/ddev.git"  : "https://git.ivsdev.net/domyks/libraries/ddev.git",
 
-    expect(ppackage._git_to_https(git_url)).to.eql(http_url);
-    expect(ppackage._git_to_https(http_url)).to.eql(http_url);
+      "git+ssh://git@github.com/131/ppackage.git"  : "https://github.com/131/ppackage.git",
+    };
+    for(let [src, dst] of Object.entries(urls))
+      expect(ppackage._git_to_https(src)).to.eql(dst);
   });
 
 

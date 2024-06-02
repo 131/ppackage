@@ -185,13 +185,17 @@ class ppackage {
   // yet, this is broader
 
   static _git_to_https(repository_url) {
-    const SSH_MASK = /^git@/;
-    if(!SSH_MASK.test(repository_url))
-      return repository_url;
 
-    return repository_url = repository_url
-      .replace(/:/g, "/")
-      .replace(SSH_MASK, "https://");
+    const SSH_MASK = new RegExp("^git@([^:]+):(.*)");
+    if(SSH_MASK.test(repository_url))
+      return repository_url.replace(SSH_MASK, "https://$1/$2");
+
+    // git+ssh://git@github.com/131/ppackage.git
+    const GIT_SSH_MASK = new RegExp("^git\\+ssh://git@([^/]+)/(.*)");
+    if(GIT_SSH_MASK.test(repository_url))
+      return repository_url.replace(GIT_SSH_MASK, "https://$1/$2");
+
+    return repository_url;
   }
 
   async _find_repo() {
