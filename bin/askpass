@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 
 let response, [,, what] = process.argv;
 if(/Username/.test(what))
