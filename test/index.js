@@ -3,6 +3,8 @@
 const expect = require('expect.js');
 const {git_to_https} = require('../lib/util');
 
+delete process.env.SSH_AUTH_SOCK;
+
 describe("static test suite", function() {
 
   it("should check git_to_https", function() {

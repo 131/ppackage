@@ -198,9 +198,7 @@ class ppackage {
         repository_url = body.repository.url;
     }
 
-    if(!process.env.SSH_AUTH_SOCK)
-      repository_url = git_to_https(repository_url);
-
+    repository_url = git_to_https(repository_url);
     return {repository_url};
   }
 
