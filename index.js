@@ -19,6 +19,7 @@ const GIT_FOLDER = ".git";
 const NPM_PACKAGE_PATH = 'package.json';
 const DOCKERIGNORE_PATH = ".dockerignore";
 const NPMIGNORE_PATH    = ".npmignore";
+const NPMRC_PATH        = ".npmrc"; //default ignored by npm
 const GITIGNORE_PATH    = ".gitignore";
 
 
@@ -163,7 +164,7 @@ class ppackage {
     await passthru("git", ["config", "--unset", "core.bare"]);
     await passthru("git", ["reset", "HEAD", "--", "."]);
 
-    for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH])
+    for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH, NPMRC_PATH])
       await passthru("git", ["checkout", "--", line]).catch(()=>{});
 
     let restore = [];
