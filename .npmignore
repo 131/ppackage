@@ -4,4 +4,4 @@
 /test
 /disc
 /.git*
-
+.npmrc
