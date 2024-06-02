@@ -8,6 +8,7 @@ const {spawn} = require('child_process');
 const args = require('nyks/process/parseArgs')();
 const passthru = require('nyks/child_process/passthru');
 const wait = require('nyks/child_process/wait');
+const trim = require('mout/string/trim');
 
 const Dockerfile = require('./lib/dockerfile');
 const {Parser, Composer} = require('yaml');
@@ -174,7 +175,7 @@ class ppackage {
       let ignore = fs.readFileSync(NPMIGNORE_PATH, 'utf8');
       restore.push(...ignore.split("\n"));
     }
-    restore =  restore.map(v => v.trim()).filter(v => v && v[0] != "#");
+    restore =  restore.map(v => trim(v.trim(), '/')).filter(v => v && v[0] != "#");
 
     for(let line of restore)
       await passthru("git", ["checkout", "--", line]).catch(()=>{});
