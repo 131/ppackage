@@ -1,0 +1,11 @@
+#!/usr/bin/node
+
+let response, [,, what] = process.argv;
+if(/Username/.test(what))
+  response = process.env.GIT_USER_LOGIN;
+if(/Password/.test(what))
+  response = process.env.GIT_USER_PASSWORD;
+if(!response)
+  process.exit(1);
+process.stdout.write(response);
+

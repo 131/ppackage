@@ -4,23 +4,31 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "ppackage": "./bin/ppackage"
+    "ppackage": "./bin/ppackage",
+    "ddev": "./bin/ddev",
+    "askpass": "./bin/askpass"
   },
   "dependencies": {
+    "cnyks": "^3.1.3",
     "mout": "^1.0.0",
     "nyks": "^6.1.8",
     "semver": "^5.3.0",
     "yaml": "^2.4.2"
   },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:131/ppackage.git"
+  },
   "devDependencies": {
     "eslint": "^8.57.0",
-    "eslint-plugin-ivs": "^4.0.0",
+    "eslint-plugin-ivs": "^4.0.1",
     "expect.js": "^0.3.1",
     "mocha": "^3.1.2",
     "nyc": "^15.0.1"
   },
   "scripts": {
-    "eslint": "eslint ."
+    "eslint": "eslint .",
+    "mocha": "node node_modules/mocha/bin/_mocha -b"
   },
   "author": "",
   "license": "ISC"

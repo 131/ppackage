@@ -1,6 +1,7 @@
 "use strict";
 
 const fs   = require('fs');
+const path = require('path');
 const semver   = require('semver');
 const {spawn} = require('child_process');
 
@@ -10,6 +11,15 @@ const wait = require('nyks/child_process/wait');
 
 const Dockerfile = require('./lib/dockerfile');
 const {Parser, Composer} = require('yaml');
+
+
+
+const GIT_FOLDER = ".git";
+const NPM_PACKAGE_PATH = 'package.json';
+const DOCKERIGNORE_PATH = ".dockerignore";
+const NPMIGNORE_PATH    = ".npmignore";
+const GITIGNORE_PATH    = ".gitignore";
+
 
 
 const laxParser = function(body) {
@@ -136,6 +146,67 @@ class ppackage {
 
     return target_version;
   }
+
+
+  async gitify() {
+
+    if(fs.existsSync(GIT_FOLDER))
+      throw `Cowardly aborting working with existing git project`;
+
+    await passthru("git", ["config", "--global", "core.askPass", path.join(__dirname, "bin/askpass")]);
+    let {repository_url} = await this._find_repo();
+
+    let cloneargs = ["clone", "--bare", repository_url, GIT_FOLDER];
+    await passthru("git", cloneargs);
+
+    await passthru("git", ["config", "--unset", "core.bare"]);
+    await passthru("git", ["reset", "HEAD", "--", "."]);
+
+    for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH])
+      await passthru("git", ["restore", line]).catch(()=>{});
+
+    let restore = [];
+    if(fs.existsSync(DOCKERIGNORE_PATH)) {
+      let ignore = fs.readFileSync(DOCKERIGNORE_PATH, 'utf8');
+      restore.push(...ignore.split("\n"));
+    }
+    if(fs.existsSync(NPMIGNORE_PATH)) {
+      let ignore = fs.readFileSync(NPMIGNORE_PATH, 'utf8');
+      restore.push(...ignore.split("\n"));
+    }
+    restore =  restore.map(v => v.trim()).filter(v => v && v[0] != "#");
+
+    for(let line of restore)
+      await passthru("git", ["restore", line]).catch(()=>{});
+  }
+
+
+  // git config --global url."https://git.ivsdev.net/".insteadOf "git@git.ivsdev.net:"
+  // yet, this is broader
+
+  static _git_to_https(repository_url) {
+    const SSH_MASK = /^git@/;
+    if(!SSH_MASK.test(repository_url))
+      return repository_url;
+
+    return repository_url = repository_url
+      .replace(/:/g, "/")
+      .replace(SSH_MASK, "https://");
+  }
+
+  async _find_repo() {
+    let repository_url;
+
+    if(fs.existsSync(NPM_PACKAGE_PATH)) {
+      let body = JSON.parse(fs.readFileSync(NPM_PACKAGE_PATH));
+      if(body.repository && body.repository.type == "git")
+        repository_url = body.repository.url;
+    }
+
+    repository_url = ppackage._git_to_https(repository_url);
+    return {repository_url};
+  }
+
 
 }
 
