@@ -10,7 +10,9 @@ const passthru = require('nyks/child_process/passthru');
 const wait = require('nyks/child_process/wait');
 const trim = require('mout/string/trim');
 
-const Dockerfile = require('./lib/dockerfile');
+const Dockerfile     = require('./lib/dockerfile');
+const {git_to_https} = require('./lib/util');
+
 const {Parser, Composer} = require('yaml');
 
 
@@ -186,20 +188,6 @@ class ppackage {
   // git config --global url."https://git.ivsdev.net/".insteadOf "git@git.ivsdev.net:"
   // yet, this is broader
 
-  static _git_to_https(repository_url) {
-    if(process.env.SSH_AUTH_SOCK)
-      return repository_url;
-    const SSH_MASK = new RegExp("^git@([^:]+):(.*)");
-    if(SSH_MASK.test(repository_url))
-      return repository_url.replace(SSH_MASK, "https://$1/$2");
-
-    // git+ssh://git@github.com/131/ppackage.git
-    const GIT_SSH_MASK = new RegExp("^git\\+ssh://git@([^/]+)/(.*)");
-    if(GIT_SSH_MASK.test(repository_url))
-      return repository_url.replace(GIT_SSH_MASK, "https://$1/$2");
-
-    return repository_url;
-  }
 
   async _find_repo() {
     let repository_url;
@@ -210,7 +198,9 @@ class ppackage {
         repository_url = body.repository.url;
     }
 
-    repository_url = ppackage._git_to_https(repository_url);
+    if(!process.env.SSH_AUTH_SOCK)
+      repository_url = git_to_https(repository_url);
+
     return {repository_url};
   }
 

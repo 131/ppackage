@@ -1,7 +1,7 @@
 "use strict";
 
 const expect = require('expect.js');
-const ppackage = require('..');
+const {git_to_https} = require('../lib/util');
 
 describe("static test suite", function() {
 
@@ -11,10 +11,13 @@ describe("static test suite", function() {
       "git@git.ivsdev.net:domyks/libraries/ddev.git"      : "https://git.ivsdev.net/domyks/libraries/ddev.git",
       "https://git.ivsdev.net/domyks/libraries/ddev.git"  : "https://git.ivsdev.net/domyks/libraries/ddev.git",
 
-      "git+ssh://git@github.com/131/ppackage.git"  : "https://github.com/131/ppackage.git",
+      "git+ssh://git@github.com/131/ppackage.git"     : "https://github.com/131/ppackage.git",
+
+      "git+https://github.com/131/docker-dsexec.git"  : "https://github.com/131/docker-dsexec.git",
+
     };
     for(let [src, dst] of Object.entries(urls))
-      expect(ppackage._git_to_https(src)).to.eql(dst);
+      expect(git_to_https(src)).to.eql(dst);
   });
 
 
