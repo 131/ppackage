@@ -155,11 +155,11 @@ class ppackage {
     if(fs.existsSync(GIT_FOLDER))
       throw `Cowardly aborting working with existing git project`;
 
-    await passthru("git", ["config", "--global", "core.askPass", path.join(__dirname, "bin/askpass")]);
     let {repository_url} = await this._find_repo();
 
-    let cloneargs = ["clone", "--bare", repository_url, GIT_FOLDER];
-    await passthru("git", cloneargs);
+
+    let cloneopts = ["--bare", "--config", `core.askPass=${path.join(__dirname, "bin/askpass")}`];
+    await passthru("git", ["clone", ...cloneopts, repository_url, GIT_FOLDER]);
 
     await passthru("git", ["config", "--unset", "core.bare"]);
     await passthru("git", ["reset", "HEAD", "--", "."]);
@@ -187,7 +187,8 @@ class ppackage {
   // yet, this is broader
 
   static _git_to_https(repository_url) {
-
+    if(process.env.SSH_AUTH_SOCK)
+      return repository_url;
     const SSH_MASK = new RegExp("^git@([^:]+):(.*)");
     if(SSH_MASK.test(repository_url))
       return repository_url.replace(SSH_MASK, "https://$1/$2");
