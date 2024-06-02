@@ -163,7 +163,7 @@ class ppackage {
     await passthru("git", ["reset", "HEAD", "--", "."]);
 
     for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH])
-      await passthru("git", ["restore", line]).catch(()=>{});
+      await passthru("git", ["checkout", "--", line]).catch(()=>{});
 
     let restore = [];
     if(fs.existsSync(DOCKERIGNORE_PATH)) {
@@ -177,7 +177,7 @@ class ppackage {
     restore =  restore.map(v => v.trim()).filter(v => v && v[0] != "#");
 
     for(let line of restore)
-      await passthru("git", ["restore", line]).catch(()=>{});
+      await passthru("git", ["checkout", "--", line]).catch(()=>{});
   }
 
 
