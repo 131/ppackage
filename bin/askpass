@@ -1,11 +1,25 @@
 #!/usr/bin/env node
 
+const url = require('url');
 let response, [,, what] = process.argv;
-if(/Username/.test(what))
-  response = process.env.GIT_USER_LOGIN;
-if(/Password/.test(what))
-  response = process.env.GIT_USER_PASSWORD;
+
+const question = new RegExp("^(Username|Password) for '(https://.*?)':");
+
+if(!question.test(what))
+  process.exit(1);
+
+
+let [, field, repository_url] = question.exec(what);
+
+let domain = url.parse(repository_url).hostname;
+let DOMAIN = domain.toUpperCase().replace(/\./g, '_');
+
+if(field == "Username")
+  response = process.env[`GIT_USER_${DOMAIN}_LOGIN`] || process.env.GIT_USER_LOGIN;
+if(field == "Password")
+  response =  process.env[`GIT_USER_${DOMAIN}_PASSWORD`] || process.env.GIT_USER_PASSWORD;
 if(!response)
   process.exit(1);
+
 process.stdout.write(response);
 
