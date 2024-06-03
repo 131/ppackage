@@ -82,7 +82,7 @@ let modes = {
       if(repository)
         set(this.meta, "extra.repository", {type : "git", url : repository});
 
-      fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2));
+      fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2) + "\n");
       files.push(this.file);
     }
   },
@@ -119,7 +119,7 @@ let modes = {
       if(repository)
         this.meta.repository = {type : "git", url : repository};
 
-      fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2));
+      fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2) + "\n");
       files.push(this.file);
     }
 
