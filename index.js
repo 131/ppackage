@@ -9,6 +9,8 @@ const args = require('nyks/process/parseArgs')();
 const passthru = require('nyks/child_process/passthru');
 const wait = require('nyks/child_process/wait');
 const trim = require('mout/string/trim');
+const unique = require('mout/array/unique');
+
 const set = require('mout/object/set');
 const drain = require('nyks/stream/drain');
 
@@ -89,7 +91,8 @@ let modes = {
     analyze : function () {
       const body = fs.readFileSync(this.file, 'utf-8');
       this.meta = Dockerfile.parse(body);
-      let {DOCKER_LABEL_VERSION : version, DOCKER_LABEL_REPOSITORY : repository}  = this.meta.labels;
+      let version = this.meta.labels[DOCKER_LABEL_VERSION];
+      let repository = this.meta.labels[DOCKER_LABEL_REPOSITORY];
       return {version, repository};
     },
     commit : function({version, repository, files}) {
@@ -164,20 +167,17 @@ class ppackage {
 
   async version(version = false, notag = false) {
 
-    let current_repository, inconsistant_repo = false;
+    let repositories = [];
 
     let current_version;
     for(let [, mode] of Object.entries(modes)) {
       let line = mode.analyze.call(mode);
       if(line.version) current_version = line.version;
-      if(!current_repository)
-        current_repository = line.repository;
-
-      inconsistant_repo |= line.repository != current_repository;
+      repositories.push(line.repository);
     }
 
-    if(inconsistant_repo)
-      throw `Inconsitant repository detected, use ppackage repository first`;
+    if(unique(repositories).length != 1)
+      throw `Inconsitant repository ${unique(repositories).join(',')} detected, use ppackage repository first`;
 
 
     let target_version = version || args.args.shift();
