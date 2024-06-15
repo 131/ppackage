@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 
 const fs   = require('fs');
@@ -5,7 +6,8 @@ const path = require('path');
 const semver   = require('semver');
 const {spawn} = require('child_process');
 
-const args = require('nyks/process/parseArgs')();
+
+const {args} = require('nyks/process/parseArgs')();
 const passthru = require('nyks/child_process/passthru');
 const wait = require('nyks/child_process/wait');
 const trim = require('mout/string/trim');
@@ -149,7 +151,7 @@ class ppackage {
       if(line.repository) current_repository = line.repository;
     }
 
-    let target_repository = repository ||  args.args.shift() || current_repository;
+    let target_repository = repository ||  args.shift() || current_repository;
 
     if(!target_repository)
       throw `Invalid repository url`;
@@ -166,7 +168,6 @@ class ppackage {
   }
 
   async version(version = false, notag = false) {
-
     let repositories = [];
 
     let current_version;
@@ -180,7 +181,7 @@ class ppackage {
       throw `Inconsitant repository ${unique(repositories).join(',')} detected, use ppackage repository first`;
 
 
-    let target_version = version || args.args.shift();
+    let target_version = version || args.shift();
 
     let dirty = await wait(spawn('git', ["diff-index", "--quiet", "HEAD"])).catch(() => true);
     if(dirty && !notag)
@@ -275,9 +276,14 @@ class ppackage {
     return {repository_url};
   }
 
-
 }
 
+
+//ensure module is called directly, i.e. not required
+if(module.parent === null) {
+  let cmd = args.shift();
+  require('cnyks/lib/bundle')(ppackage, null, [`--ir://run=${cmd}`]); //start runner
+}
 
 module.exports = ppackage;
 
