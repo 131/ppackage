@@ -219,7 +219,10 @@ class ppackage {
   }
 
 
-  async gitify() {
+  async gitify(branch = null) {
+
+    if(!branch)
+      branch = args.shift() || "master";
 
     if(fs.existsSync(GIT_FOLDER))
       throw `Cowardly aborting working with existing git project`;
@@ -231,12 +234,14 @@ class ppackage {
     await passthru("git", ["clone", ...cloneopts, repository_url, GIT_FOLDER]);
 
     await passthru("git", ["config", "--unset", "core.bare"]);
-    await passthru("git", ["reset", "HEAD", "--", "."]);
+    await passthru("git", ["reset", branch]);
+    await passthru("git", ["checkout", branch]);
 
-    for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH, NPMRC_PATH])
+    for(let line of [GITIGNORE_PATH, DOCKERIGNORE_PATH, NPMIGNORE_PATH])
       await passthru("git", ["checkout", "--", line]).catch(()=>{});
 
-    let restore = [];
+
+    let restore = [".git*", NPMRC_PATH];
     if(fs.existsSync(DOCKERIGNORE_PATH)) {
       let ignore = fs.readFileSync(DOCKERIGNORE_PATH, 'utf8');
       restore.push(...ignore.split("\n"));
