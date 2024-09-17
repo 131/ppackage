@@ -182,7 +182,7 @@ class ppackage {
 
 
     let target_version = version || args.shift();
-
+    await passthru("git", ["status"]);
     let dirty = await wait(spawn('git', ["diff-index", "--quiet", "HEAD"])).catch(() => true);
     if(dirty && !notag)
       throw "Working directory not clean, aborting";
