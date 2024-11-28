@@ -13,6 +13,7 @@ const wait = require('nyks/child_process/wait');
 const trim = require('mout/string/trim');
 const unique = require('mout/array/unique');
 
+const get = require('mout/object/get');
 const set = require('mout/object/set');
 const drain = require('nyks/stream/drain');
 
@@ -33,6 +34,8 @@ const COMPOSER_PATH     = "composer.json";
 
 
 
+
+
 const laxParser = function(body) {
   const tokens = new Parser().parse(body);
   const docs = new Composer({merge : true, uniqueKeys : false}).compose(tokens);
@@ -47,7 +50,35 @@ const DOCKER_LABEL_REPOSITORY = "org.opencontainers.image.source";
 const GITLAB_PATH_VERSION     = ".version";
 const GITLAB_PATH_REPOSITORY  = ".repository";
 
+//https://developer.hashicorp.com/terraform/registry/providers/publishing
+const TF_PROVIDER_PATH  = "terraform-registry-manifest.json";
+const TF_PROVIDER_METADATA_VERSION = "metadata.version";
+const TF_PROVIDER_METADATA_REPOSITORY = "metadata.repository";
+
+
 let modes = {
+
+  tf_provider    : {
+    file    : TF_PROVIDER_PATH,
+    analyze : function() {
+      const body = fs.readFileSync(this.file, 'utf-8');
+      this.meta = JSON.parse(body);
+      let version = get(this.meta, TF_PROVIDER_METADATA_VERSION);
+      let repository = get(this.meta, TF_PROVIDER_METADATA_REPOSITORY);
+      return {version, repository};
+    },
+
+    commit : function({version, repository, files}) {
+      if(version)
+        set(this.meta, TF_PROVIDER_METADATA_VERSION, version);
+      if(repository)
+        set(this.meta, TF_PROVIDER_METADATA_REPOSITORY, {type : "git", url : repository});
+
+      fs.writeFileSync(this.file, JSON.stringify(this.meta, null, 2) + "\n");
+      files.push(this.file);
+    }
+  },
+
   gitlab    : {
     file    : '.gitlab-ci.yml',
     analyze : function() {
@@ -70,6 +101,8 @@ let modes = {
     }
 
   },
+
+
   composer  : {
     file : 'composer.json',
     analyze : function() {
