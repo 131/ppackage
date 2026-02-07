@@ -252,15 +252,15 @@ class ppackage {
   }
 
 
-  async gitify(branch = null) {
+  async gitify(repository_url = null, branch = "master") {
+    if(!repository_url)
+      repository_url = args.shift();
 
-    if(!branch)
-      branch = args.shift() || "master";
+    if(!repository_url)
+      ({repository_url} = await this._find_repo());
 
     if(fs.existsSync(GIT_FOLDER))
       throw `Cowardly aborting working with existing git project`;
-
-    let {repository_url} = await this._find_repo();
 
 
     let cloneopts = ["--bare", "--config", `core.askPass=${path.join(__dirname, "bin/askpass")}`];
