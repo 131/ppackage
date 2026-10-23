@@ -18,7 +18,8 @@ const set = require('mout/object/set');
 const drain = require('nyks/stream/drain');
 
 const Dockerfile     = require('./lib/dockerfile');
-const {git_to_https} = require('./lib/util');
+const gomod          = require('./lib/gomod');
+const {git_to_https, parse_repository, format_repository} = require('./lib/util');
 
 const {Parser, Composer} = require('yaml');
 
@@ -58,6 +59,26 @@ const TF_PROVIDER_METADATA_REPOSITORY = "metadata.repository";
 
 let modes = {
 
+  go : {
+    file : 'go.mod',
+    // module <host>/<path>[/vN] is the repository marker, version is a `// version: X.Y.Z` comment
+    analyze : function() {
+      this.body = fs.readFileSync(this.file, 'utf-8');
+      this.meta = gomod.parse(this.body);
+      let {version, repository_path} = this.meta;
+      return {version, repository_path, repository_protocol : null};
+    },
+    commit : function({version, repository = this.meta.repository_path, files}) {
+      let major = version ? semver.major(version) : this.meta.major;
+      this.body = gomod.set_module(this.body, repository, major);
+      if(version)
+        this.body = gomod.set_version(this.body, version);
+
+      fs.writeFileSync(this.file, this.body);
+      files.push(this.file);
+    }
+  },
+
   tf_provider    : {
     file    : TF_PROVIDER_PATH,
     analyze : function() {
@@ -65,7 +86,8 @@ let modes = {
       this.meta = JSON.parse(body);
       let version = get(this.meta, TF_PROVIDER_METADATA_VERSION);
       let repository = get(this.meta, TF_PROVIDER_METADATA_REPOSITORY);
-      return {version, repository};
+      let {repository_path, repository_protocol} = parse_repository(repository);
+      return {version, repository_path, repository_protocol};
     },
 
     commit : function({version, repository, files}) {
@@ -86,7 +108,8 @@ let modes = {
       this.meta = laxParser(body);
       let version = this.meta.get(GITLAB_PATH_VERSION);
       let repository = this.meta.get(GITLAB_PATH_REPOSITORY);
-      return {version, repository};
+      let {repository_path, repository_protocol} = parse_repository(repository);
+      return {version, repository_path, repository_protocol};
     },
 
     commit : function({version, repository, files}) {
@@ -109,7 +132,8 @@ let modes = {
       const body = fs.readFileSync(this.file, 'utf-8');
       this.meta = JSON.parse(body);
       let {version, extra :  { repository : { url : repository} } = {repository : {}}} = this.meta;
-      return {version, repository};
+      let {repository_path, repository_protocol} = parse_repository(repository);
+      return {version, repository_path, repository_protocol};
     },
     commit : function({version, repository, files}) {
       if(version)
@@ -128,7 +152,8 @@ let modes = {
       this.meta = Dockerfile.parse(body);
       let version = this.meta.labels[DOCKER_LABEL_VERSION];
       let repository = this.meta.labels[DOCKER_LABEL_REPOSITORY];
-      return {version, repository};
+      let {repository_path, repository_protocol} = parse_repository(repository);
+      return {version, repository_path, repository_protocol};
     },
     commit : function({version, repository, files}) {
       if(version)
@@ -146,7 +171,8 @@ let modes = {
       const body = fs.readFileSync(this.file, 'utf-8');
       this.meta = JSON.parse(body);
       let {version, repository : { url : repository} = {}} = this.meta;
-      return {version, repository};
+      let {repository_path, repository_protocol} = parse_repository(repository);
+      return {version, repository_path, repository_protocol};
     },
     commit : function({version, repository, files}) {
       if(version)
@@ -181,7 +207,7 @@ class ppackage {
 
     for(let [, mode] of Object.entries(modes)) {
       let line = mode.analyze.call(mode);
-      if(line.repository) current_repository = line.repository;
+      if(line.repository_path) current_repository = format_repository(line.repository_path, line.repository_protocol);
     }
 
     let target_repository = repository ||  args.shift() || current_repository;
@@ -201,17 +227,22 @@ class ppackage {
   }
 
   async version(version = false, notag = false) {
-    let repositories = [];
+    let repositories = [], protocols = [];
 
     let current_version;
     for(let [, mode] of Object.entries(modes)) {
       let line = mode.analyze.call(mode);
       if(line.version) current_version = line.version;
-      repositories.push(line.repository);
+      repositories.push(line.repository_path);
+      protocols.push(line.repository_protocol);
     }
 
     if(unique(repositories).length != 1)
       throw `Inconsitant repository ${unique(repositories).join(',')} detected, use ppackage repository first`;
+
+    protocols = unique(protocols.filter(Boolean)); // go.mod carries none
+    if(protocols.length > 1)
+      throw `Inconsitant repository protocol ${protocols.join(',')} detected, use ppackage repository first`;
 
 
     let target_version = version || args.shift();
