@@ -1,7 +1,7 @@
 {
   "name": "ppackage",
   "version": "2.7.1",
-  "description": "",
+  "description": "Release a module: align its version markers (package.json, composer.json, go.mod, Dockerfile, .gitlab-ci.yml, Terraform) and tag it",
   "main": "index.js",
   "bin": {
     "ppackage": "index.js",
@@ -27,7 +27,8 @@
   },
   "scripts": {
     "eslint": "eslint .",
-    "mocha": "node node_modules/mocha/bin/_mocha -b"
+    "mocha": "node node_modules/mocha/bin/_mocha -b",
+    "test": "npm run mocha"
   },
   "author": "",
   "license": "ISC"
