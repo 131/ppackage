@@ -1,6 +1,6 @@
 {
   "name": "ppackage",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "description": "Release a module: align its version markers (package.json, composer.json, go.mod, Dockerfile, .gitlab-ci.yml, Terraform) and tag it",
   "main": "index.js",
   "bin": {
